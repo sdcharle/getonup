@@ -2,8 +2,10 @@
 
 static Window *s_countdown_window, *s_wakeup_window;
 static TextLayer *s_error_text_layer, *s_tea_text_layer, *s_countdown_text_layer, *s_cancel_text_layer;
+
 static BitmapLayer *s_getonup_bitmap_layer;
 static GBitmap *s_getonup_bitmap;// ensure desTROYED!
+
 static WakeupId s_wakeup_id = -1;
 static time_t s_wakeup_timestamp = 0;
 static char s_countdown_text[32];
@@ -11,7 +13,7 @@ static AppTimer *countdown_timer_handler;
 static int WAKEUP_SECONDS = 10; //3600; // seconds between wakeups
 // all gotta be static ferreal?
 static int current_frame = 0; 
-static int wakeup_live = 0;
+static int wakeup_live = 0; // is a wakeup active?
 static uint32_t stand_pix[] = {
     RESOURCE_ID_SIT_PICTURE,
     RESOURCE_ID_STAND_PICTURE
@@ -49,11 +51,9 @@ void set_cancel_text() {
     text_layer_set_text(s_countdown_text_layer, "");
   } else {
     text_layer_set_text(s_tea_text_layer, "Time 'til wakeup:");
-    // depends on you setting the below, of course@
     text_layer_set_text(s_countdown_text_layer, s_countdown_text);
   }
 }
-
 
 static void set_countdown_text() {
   int hrs, min, sec;
@@ -75,16 +75,12 @@ static void set_countdown_text() {
 static void timer_handler(void *data) {
   set_countdown_text();
   APP_LOG(APP_LOG_LEVEL_DEBUG, "countdown tick."); 
-  // is this a prob on wakeup????
-  //if (s_countdown_text_layer) {
-    layer_mark_dirty(text_layer_get_layer(s_countdown_text_layer));
-    if (wakeup_scheduled() && !wakeup_live)
-      countdown_timer_handler = app_timer_register(1000, timer_handler, data);
-  //}
+  layer_mark_dirty(text_layer_get_layer(s_countdown_text_layer));
+  if (wakeup_scheduled() && !wakeup_live)
+    countdown_timer_handler = app_timer_register(1000, timer_handler, data);
 }
 
-static void set_next_wakeup() {
-  
+static void set_next_wakeup() {  
   APP_LOG(APP_LOG_LEVEL_DEBUG, "schedule wakeup");
   time_t wakeup_time = time(NULL) + WAKEUP_SECONDS;
   s_wakeup_id = wakeup_schedule(wakeup_time, 1, true); // 1?!?!?
@@ -95,7 +91,7 @@ static void set_next_wakeup() {
   
   // If we couldn't schedule the wakeup event, display error_text overlay 
   if (s_wakeup_id <= 0) {
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "show error, could not sched.");
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "show error, could not sched.");
     layer_set_hidden(text_layer_get_layer(s_error_text_layer), false);
     return;
   }
@@ -104,7 +100,8 @@ static void set_next_wakeup() {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "register your timer");
   // do we want to do below or no?
   //if (!wakeup_live)
-  countdown_timer_handler = app_timer_register(1000, timer_handler, NULL);  
+  //countdown_timer_handler = app_timer_register(1000, timer_handler, NULL); 
+  // actually not a good idea.?
 }
 
 static void getonup_handler(void *data) {
@@ -116,8 +113,7 @@ static void getonup_handler(void *data) {
 }
 
 static void countdown_back_handler(ClickRecognizerRef recognizer, void *context) {
-  //window_stack_pop_all(true); // Exit app while waiting for tea to brew
-  window_stack_pop(true); // Go back to countdown window
+  window_stack_pop_all(true); // That's pretty much it tho!
 }
 
 //  Toggle the current wakeup event on the countdown screen (should probly change name!)
@@ -128,9 +124,10 @@ static void countdown_cancel_handler(ClickRecognizerRef recognizer, void *contex
       s_wakeup_id = -1;
       persist_delete(PERSIST_WAKEUP);  
       APP_LOG(APP_LOG_LEVEL_DEBUG, "cancel countdown."); 
-      app_timer_cancel(countdown_timer_handler);
+      //app_timer_cancel(countdown_timer_handler);
   } else {
       set_next_wakeup();
+      app_timer_register(0, timer_handler, NULL);
   }
   set_cancel_text();
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Mark layers dirty after toggling.");  
@@ -183,6 +180,7 @@ static void countdown_window_unload(Window *window) {
 static void wakeup_click_handler(ClickRecognizerRef recognizer, void *context) {
   // Exit app after user is done w/ the alert
   APP_LOG(APP_LOG_LEVEL_DEBUG, "pop all from stack");
+   set_next_wakeup();
   //if (s_getonup_bitmap)
   //  gbitmap_destroy(s_getonup_bitmap);
   //window_stack_pop(true);
@@ -224,24 +222,20 @@ static void wakeup_window_unload(Window *window) {
     gbitmap_destroy(s_getonup_bitmap);
   if (s_getonup_bitmap_layer)
     bitmap_layer_destroy(s_getonup_bitmap_layer); // this caused the Cinema dealy to crash!
-  
-  // but tea dude says:
-  //gbitmap_destroy(s_tea_bitmap);
-  //bitmap_layer_destroy(s_bitmap_layer);
 }
 
 static void wakeup_handler(WakeupId id, int32_t reason) {
   //Delete persistent storage value
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "handling wakeup");
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "handling wakeup");
   persist_delete(PERSIST_WAKEUP);
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "deleted persisted");
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "deleted persisted");
   current_frame = 0;
   if (!wakeup_live) {
     window_stack_push(s_wakeup_window, false);
     APP_LOG(APP_LOG_LEVEL_DEBUG, "pushed wakeup win on the stack");
   }
   vibes_double_pulse();
-  set_next_wakeup();
+  //set_next_wakeup(); NOT YET!
   //APP_LOG(APP_LOG_LEVEL_DEBUG, "Set a wakeup after id %d reason %d",(int)id,(int)reason);
 }
 
