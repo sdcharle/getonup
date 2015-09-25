@@ -1,0 +1,35 @@
+{
+    "appKeys": {
+        "dummy": 0
+    },
+    "capabilities": [
+        ""
+    ],
+    "companyName": "boxkite",
+    "longName": "getonup",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/standDitheredFinal.png",
+                "name": "STAND_PICTURE",
+                "type": "png"
+            },
+            {
+                "file": "images/sitDitheredFinal.png",
+                "name": "SIT_PICTURE",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "getonup",
+    "targetPlatforms": [
+        "aplite"
+    ],
+    "uuid": "89bcd079-41b7-4d8c-bc38-af385d86a55c",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
